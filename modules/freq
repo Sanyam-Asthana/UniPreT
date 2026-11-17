@@ -1,0 +1,118 @@
+#!/bin/sh
+
+# UniPreT Utility: freq
+# Computes frequencies from the input stream and outputs TSV
+#
+# Usage:
+#   tokenize corpus.txt | freq [OPTION]...
+#   cat corpus.txt | lowercase | strip-punctuation | tokenize | freq -m 2
+
+set -eu
+
+VERSION="0.1.0"
+PROGRAM_NAME="freq"
+MIN_FREQ=1
+SHOW_PROB=0
+REVERSE_ORDER=0
+
+usage() {
+  cat <<EOF
+Usage: $PROGRAM_NAME [OPTION]... [FILE]...
+Count occurrences of identical lines/tokens in a stream and output sorted TSV.
+
+Options:
+  -m, --min-freq [INT]  Minimum frequency threshold to include (default: 1)
+  -p, --prob            Append relative frequency (probability) column
+  -r, --reverse         Sort in ascending order (least frequent first)
+  -h, --help            Display this help message and exit
+  -v, --version         Output version information and exit
+
+Examples:
+  cat corpus.txt | tokenize | $PROGRAM_NAME
+  cat corpus.txt | tokenize | ngrams -n 2 | $PROGRAM_NAME -m 5 -p
+EOF
+}
+
+version() {
+    cat <<EOF
+$PROGRAM_NAME (UniPreT) $VERSION
+EOF
+}
+
+error() {
+    cat <<EOF
+$PROGRAM_NAME: invalid option -- '$1'
+Try '$PROGRAM_NAME --help' for more information.
+EOF
+>&2
+}
+
+# --- Argument Parsing ---
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -m|--min-freq)
+      if [ $# -gt 1 ] && [ "${2#-}" = "$2" ]; then
+        MIN_FREQ="$2"
+        shift
+      else
+        echo "$PROGRAM_NAME: option '$1' requires an integer argument" >&2
+        exit 1
+      fi
+      ;;
+    -p|--prob)
+      SHOW_PROB=1
+      ;;
+    -r|--reverse)
+      REVERSE_ORDER=1
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    -v|--version)
+      version
+      ;;
+    --)
+      shift
+      break
+      ;;
+    -*)
+      error
+      ;;
+    *)
+      break
+      ;;
+  esac
+  shift
+done
+
+if [ -z "${LC_ALL:-}" ]; then
+  export LC_CTYPE="${LC_CTYPE:-${LANG:-C.UTF-8}}"
+fi
+
+if [ "$REVERSE_ORDER" -eq 1 ]; then
+  SORT_FLAGS="-k2,2n -k1,1"
+else
+  SORT_FLAGS="-k2,2nr -k1,1"
+fi
+
+awk -v min="$MIN_FREQ" -v prob="$SHOW_PROB" '
+  {
+    sub(/\r$/, "")
+    if ($0 != "") {
+      counts[$0]++
+      total++
+    }
+  }
+  END {
+    for (item in counts) {
+      if (counts[item] >= min) {
+        if (prob == 1) {
+          printf "%s\t%d\t%.6f\n", item, counts[item], counts[item] / total
+        } else {
+          printf "%s\t%d\n", item, counts[item]
+        }
+      }
+    }
+  }
+' "$@" | LC_ALL=C sort -t '	' $SORT_FLAGS

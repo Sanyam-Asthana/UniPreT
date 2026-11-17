@@ -1,0 +1,129 @@
+#!/bin/sh
+
+# UniPreT Module: ngrams
+# Extracts n-grams from a tokenized stream
+#
+# Usage:
+#   ngrams [OPTION]... [FILE]...
+#   cat tokens.txt | ngrams
+
+# -e (errexit) prevents errors from cascading down the script
+# -u (nounset) treats unset variables as errors
+set -eu
+
+VERSION="0.1.0"
+PROGRAM_NAME="ngrams"
+
+usage() {
+  cat <<EOF
+Usage: $PROGRAM_NAME [OPTION]... [FILE]...
+Extracts n-grams from a tokenized stream
+
+Options:
+  -n, --number    [INT] Size of the n-gram window (default: 2)
+  -d, --delimiter [STR] String delimiter to join n-gram tokens (default: single space)
+  -h, --help      Display this help message and exit
+  -v, --version   Output version information and exit
+
+Examples:
+  echo "Hello WORLD" | tokenize | $PROGRAM_NAME
+  $PROGRAM_NAME tokens.txt > output.txt
+EOF
+}
+
+version() {
+    cat <<EOF
+$PROGRAM_NAME (UniPreT) $VERSION
+EOF
+}
+
+error() {
+    cat <<EOF>&2
+$PROGRAM_NAME: invalid option -- '$1'
+Try '$PROGRAM_NAME --help' for more information.
+EOF
+}
+
+arg_error() {
+    cat <<EOF>&2
+$PROGRAM_NAME: option '$1' requires an argument
+EOF
+}
+
+N=2
+DELIMITER=" "
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -n|--number)
+            if [ $# -gt 1 ] && [ "${2#-}" = "$2" ]; then
+                N="$2"
+                shift
+            else
+                arg_error $1
+                exit 1
+            fi
+            ;;
+        -d|--delimiter)
+            if [ $# -gt 1 ] && [ "${2#-}" = "$2" ]; then
+                DELIMITER="$2"
+                shift
+            else
+                arg_error $1
+                exit 1
+            fi
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        -v|--version)
+            version
+            exit 0
+            ;;
+        --)
+            shift
+            break
+            ;;
+        -*)
+            error $1
+            exit 1
+            ;;
+        *)
+            break
+            ;;
+    esac
+    shift
+done
+
+if [ -z "${LC_ALL:-}" ]; then
+  export LC_CTYPE="${LC_CTYPE:-${LANG:-C.UTF-8}}"
+fi
+
+awk -v n="$N" -v sep="$DELIMITER" '
+    BEGIN {
+        count = 0
+    }
+    {
+        sub(/\r$/, "") # trim trailing carriage returns
+
+        if ($0 == "") {
+            count = 0
+            next
+        }
+        
+        count++
+        window[count] = $0
+
+        if (count >= n) {
+            out = window[count - n + 1]
+            for (i = count - n + 2; i <= count; i++) {
+                out = out sep window[i]
+            }
+
+            print out
+
+            delete window[count - n + 1]
+        }
+    }
+' "$@"
