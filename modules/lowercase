@@ -3,19 +3,19 @@
 # UniPreT Module: lowercase
 # Converts text streams to lowercase
 #
-# Usage: 
+# Usage:
 #   lowercase [OPTION]... [FILE]...
 #   cat corpus.txt | lowercase
 
 # -e (errexit) prevents errors from cascading down the script
 # -u (nounset) treats unset variables as errors
-set -eu 
+set -eu
 
 VERSION="0.1.0"
 PROGRAM_NAME="lowercase"
 
 usage() {
-  cat <<EOF
+    cat <<EOF
 Usage: $PROGRAM_NAME [OPTION]... [FILE]...
 Convert text streams to lowercase
 
@@ -40,36 +40,36 @@ error() {
 $PROGRAM_NAME: invalid option -- '$1'
 Try '$PROGRAM_NAME --help' for more information.
 EOF
->&2
+    >&2
 }
 
 while [ $# -gt 0 ]; do
     case "$1" in
-        -h|--help)
-            usage
-            exit 0
-            ;;
-        -v|--version)
-            version
-            exit 0
-            ;;
-        --)
-            shift
-            break
-            ;;
-        -*)
-            error $1
-            exit 1
-            ;;
-        *)
-            break
-            ;;
+    -h | --help)
+        usage
+        exit 0
+        ;;
+    -v | --version)
+        version
+        exit 0
+        ;;
+    --)
+        shift
+        break
+        ;;
+    -*)
+        error $1
+        exit 1
+        ;;
+    *)
+        break
+        ;;
     esac
     shift
 done
 
 if [ -z "${LC_ALL:-}" ]; then
-  export LC_CTYPE="${LC_CTYPE:-${LANG:-C.UTF-8}}"
+    export LC_CTYPE="${LC_CTYPE:-${LANG:-C.UTF-8}}"
 fi
 
 awk '{ print tolower($0) }' "$@"

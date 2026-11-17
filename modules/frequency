@@ -1,16 +1,16 @@
 #!/bin/sh
 
-# UniPreT Utility: freq
+# UniPreT Utility: frequency
 # Computes frequencies from the input stream and outputs TSV
 #
 # Usage:
-#   tokenize corpus.txt | freq [OPTION]...
+#   tokenize corpus.txt | frequency [OPTION]...
 #   cat corpus.txt | lowercase | strip-punctuation | tokenize | freq -m 2
 
 set -eu
 
 VERSION="0.1.0"
-PROGRAM_NAME="freq"
+PROGRAM_NAME="frequency"
 MIN_FREQ=1
 SHOW_PROB=0
 REVERSE_ORDER=0
